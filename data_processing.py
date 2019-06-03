@@ -117,7 +117,7 @@ def get_frame_gaze_dict(gaze_list, frame_list, bbox_list, max_idx):
                         (bbox[1] <= pupil[1] <= bbox[3])):
                         is_in = True
                         break
-            bbox_out[key] = is_in
+            bbox_out[key].append(is_in)
     out.update(bbox_out)
     out["index"] = np.arange(max_idx)
     return out

@@ -16,7 +16,7 @@ def looks_classification_report(y_true, y_pred):
     y_true_combined = lb.fit_transform(list(chain.from_iterable(y_true)))
     y_pred_combined = lb.transform(list(chain.from_iterable(y_pred)))
 
-    tagset = set(lb.classes_) - {"None"}
+    tagset = set(lb.classes_)
     tagset = sorted(tagset, key=lambda tag: tag.split('-', 1)[::-1])
     class_indices = {cls: idx for idx, cls in enumerate(lb.classes_)}
 
