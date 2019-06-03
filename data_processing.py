@@ -13,6 +13,12 @@ object_det = os.path.join(root_dir, "object_detections")
 gaze = os.path.join(root_dir, "gaze")
 gt = os.path.join(root_dir, "annotations")
 
+def bbox_normalized_coords(bbox):
+    x = bbox[0] / 1280
+    y = 1 - bbox[1] / 720
+    w = bbox[2] / 1280
+    h = bbox[3] / 720
+    return x, y, w, h
 
 def read_object_detections(filename):
 
@@ -20,24 +26,30 @@ def read_object_detections(filename):
         object_data = f.readlines()
 
     frame_list = []
+    bbox_list = []
+    
     for line in object_data:
         frame = defaultdict(list)
+        bbox = defaultdict(list)
 
         if line != "\n":
             a = ast.literal_eval(line)
             if isinstance(a, tuple):
                 for b in a:
-                    try:
-                        obj = ast.literal_eval(b)
-                        frame[obj[0]].append((obj[2][0]/1280, 1 - obj[2][1]/720, obj[1]))
-                    except:
-                        print(a)
+                    obj = ast.literal_eval(b)
+                    x, y, w, h = bbox_normalized_coords(obj[2])
+                    frame[obj[0]].append((x, y, obj[1]))
+                    bbox[obj[0] + "_bbox"].append((x-w/2, y-h/2, x+w/2, y+h/2))
             else:
                 obj = ast.literal_eval(a)
-                frame[obj[0]].append((obj[2][0]/1280, 1 - obj[2][1]/720, obj[1]))
+                x, y, w, h = bbox_normalized_coords(obj[2])
+                frame[obj[0]].append((x, y, obj[1]))
+                bbox[obj[0] + "_bbox"].append((x-w/2, y-h/2, x+w/2, y+h/2))
 
         frame_list.append(frame)
-    return frame_list
+        bbox_list.append(bbox)
+        
+    return frame_list, bbox_list
 
 
 def read_gaze_file(filename):
@@ -58,31 +70,55 @@ def read_gaze_file(filename):
     return gaze_list, max_idx, tpf
 
 
-def get_frame_gaze_dict(gaze_list, frame_list, max_idx):
-    out = {"card":[],
+def get_frame_gaze_dict(gaze_list, frame_list, bbox_list, max_idx):
+    out = {
+          "card":[],
           "face":[],
           "dice":[],
           "key":[],
           "map":[],
-          "ball":[]}
+          "ball":[]
+          }
+    bbox_out = {"card_bbox":[],
+          "face_bbox":[],
+          "dice_bbox":[],
+          "key_bbox":[],
+          "map_bbox":[],
+          "ball_bbox":[]}
 
     for i in range(max_idx):
+        
         pupil = gaze_list[i]
         frame = frame_list[i]
+        bbox_l = bbox_list[i]
+        
         for key in out.keys():
+            
             if key in frame:
                 dists = []
+                
                 for pt in frame[key]:
                     dist = ((pupil[0] - pt[0])**2 + (pupil[1] - pt[1])**2)**0.5
                     if math.isnan(dist):
                         print(pupil, pt)
                     else:
                         dists.append(dist)
+                
                 min_dist = min(dists)
                 out[key].append((2-min_dist)/2)
             else:
                 out[key].append(0)
-
+                
+        for key in bbox_out.keys():
+            is_in = False
+            if key in bbox_l:
+                for bbox in bbox_l[key]:
+                    if ((bbox[0] <= pupil[0] <= bbox[2]) and
+                        (bbox[1] <= pupil[1] <= bbox[3])):
+                        is_in = True
+                        break
+            bbox_out[key] = is_in
+    out.update(bbox_out)
     out["index"] = np.arange(max_idx)
     return out
 
@@ -117,9 +153,12 @@ def main():
                 "7_24_003_annotated.csv", "2018-07-17-004_annotated.csv"]
 
     obj_data = []
+    bbox_data = []
 
     for file in obj_det_files:
-        obj_data.append(read_object_detections(file))
+        frame_list, bbox_list = read_object_detections(file)
+        obj_data.append(frame_list)
+        bbox_data.append(bbox_list)
 
     gaze_data = []
     max_idxs = []
@@ -132,8 +171,8 @@ def main():
         tpfs.append(tpf)
 
     out_dicts = []
-    for obj, gz, midx in zip(obj_data, gaze_data, max_idxs):
-        out_dicts.append(get_frame_gaze_dict(gz, obj, midx))
+    for obj, bbx, gz, midx in zip(obj_data, bbox_data, gaze_data, max_idxs):
+        out_dicts.append(get_frame_gaze_dict(gz, obj, bbx, midx))
 
     final_dicts = []
     for file, out, midx, tpf in zip(gt_files, out_dicts, max_idxs, tpfs):
@@ -148,4 +187,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
