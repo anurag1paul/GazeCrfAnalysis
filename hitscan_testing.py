@@ -36,4 +36,3 @@ for features, ylabel in test_dicts:
     y_true.append(ylabel)
 
 print(looks_classification_report(y_true, y_pred))
-

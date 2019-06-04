@@ -38,13 +38,19 @@ def read_object_detections(filename):
                 for b in a:
                     obj = ast.literal_eval(b)
                     x, y, w, h = bbox_normalized_coords(obj[2])
-                    frame[obj[0]].append((x, y, obj[1]))
-                    bbox[obj[0] + "_bbox"].append((x-w/2, y-h/2, x+w/2, y+h/2))
+                    obj_name = obj[0]
+                    if obj_name == "cards":
+                        obj_name = "card"
+                    frame[obj_name].append((x, y, obj[1]))
+                    bbox[obj_name + "_bbox"].append((x-w/2, y-h/2, x+w/2, y+h/2))
             else:
                 obj = ast.literal_eval(a)
                 x, y, w, h = bbox_normalized_coords(obj[2])
-                frame[obj[0]].append((x, y, obj[1]))
-                bbox[obj[0] + "_bbox"].append((x-w/2, y-h/2, x+w/2, y+h/2))
+                obj_name = obj[0]
+                if obj_name == "cards":
+                    obj_name = "card"
+                frame[obj_name].append((x, y, obj[1]))
+                bbox[obj_name + "_bbox"].append((x-w/2, y-h/2, x+w/2, y+h/2))
 
         frame_list.append(frame)
         bbox_list.append(bbox)
