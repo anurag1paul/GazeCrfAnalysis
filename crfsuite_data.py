@@ -6,15 +6,7 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
-rev_lbls = {
-            1: "card",
-            2: "face",
-            3: "dice",
-            4: "key",
-            5: "map",
-            6: "ball",
-            0: "none"
-            }
+from constants import SHIFT, SEQ_LEN, REV_LABELS
 
 
 def get_crf_features(out):
@@ -47,44 +39,31 @@ def get_crf_features(out):
              "prev_ball":last_frame["ball"]
             }
         features.append(f)
-        ylabel.append(rev_lbls[frame["look"]])
+        ylabel.append(REV_LABELS[frame["look"]])
         y_num_label.append(frame["look"])
     return features, ylabel, y_num_label
+
 
 def get_label(arr):
     values, counts = np.unique(arr, return_counts=True)
     idx = np.argmax(counts)
     return values[idx]
 
-def main():
-    with open(os.path.join("data/out", "data.pkl"), "rb") as f:
-        final_dicts = pickle.load(f)
 
+def prepare_data(data_dicts):
     features_list = []
     ylabel_list = []
     num_label = []
 
-    for fdict in final_dicts:
+    for fdict in data_dicts:
         features, ylabel, y_num_label = get_crf_features(fdict)
         features_list.append(features)
         ylabel_list.append(ylabel)
         num_label.append(y_num_label)
 
     data = []
-    labels = []
     for features, ylabel, nlabel in zip(features_list, ylabel_list, num_label):
-        for i in range(0, len(features), 5):
-            data.append((features[i:i+20], ylabel[i:i+20]))
-            labels.append(get_label(nlabel[i:i+20]))
-    
-    train, test, train_labels, test_labels = train_test_split(data, labels, test_size=0.2)
-    
-    with open(os.path.join("data/out", "train.pkl"), "wb") as f:
-        pickle.dump(train, f)
-    
-    with open(os.path.join("data/out", "test.pkl"), "wb") as f:
-        pickle.dump(test, f)
+        for i in range(0, len(features), SHIFT):
+            data.append((features[i:i+SEQ_LEN], ylabel[i:i+SEQ_LEN]))
 
-if __name__ == "__main__":
-    main()
-    print("Train and Test Subsets built")
+    return data

@@ -6,8 +6,9 @@ import math
 import pickle
 
 from collections import defaultdict
+from sklearn.model_selection import KFold
 
-from constants import FILE_CHUNK
+from constants import FILE_CHUNK, OBJECT_DETECTIONS, GAZE_POSITIONS, GROUND_TRUTH, NUMBER_OF_CV_FOLDS, LABELS
 
 root_dir = "data/"
 object_det = os.path.join(root_dir, "object_detections")
@@ -135,16 +136,10 @@ def read_looks_gt_file(filename, out, max_idx, tpf):
     looks = pd.read_csv(os.path.join(gt, filename))[["object", "start_sec", "end_sec"]]
     looks = looks.sort_values("start_sec")
     out["look"] = np.array([0] * max_idx)
-    labels = {"card": 1,
-              "face": 2,
-              "dice": 3,
-              "key": 4,
-              "map": 5,
-              "ball": 6}
     for row in looks.values:
         start = int(np.floor(row[1] / tpf))
         end = int(np.ceil(row[2] / tpf))
-        out["look"][start:end] = labels[row[0]]
+        out["look"][start:end] = LABELS[row[0]]
 
     out["look"] = list(out["look"])
     return out
@@ -152,26 +147,24 @@ def read_looks_gt_file(filename, out, max_idx, tpf):
 
 def create_chunks(final_dicts, chunk_size):
     chunks = []
-    for data in final_dicts:
-        num_frames = len(data)
+    for i, data in enumerate(final_dicts):
+        num_frames = len(data["look"])
         num_chunks = num_frames // chunk_size
-        for i in range(num_chunks):
-            chunks.append(data[i*chunk_size:(i+1)*chunk_size])
+        print(i, num_chunks)
+        for j in range(num_chunks):
+            chunk = {}
+            for key in data.keys():
+                chunk[key] = data[key][j*chunk_size:(j+1)*chunk_size]
+            chunks.append(chunk)
     return chunks
 
 
 def main():
-    obj_det_files = ["Andy.csv", "Daniel.csv", "2018_07_17_001.csv", "2018_07_24_003.csv", "2018_07_17_004.csv"]
-    gaze_files = ["Andy_gaze_positions.csv", "Daniel_gaze_positions.csv",
-                  "2018_07_17_001_gaze_positions.csv", "2018_07_24_003_gaze_positions.csv",
-                  "2018-07-17-004_gaze_positions.csv"]
-    gt_files = ["Andy_annotated.csv", "daniel_annotated.csv", "7_17_001_annotated.csv",
-                "7_24_003_annotated.csv", "2018-07-17-004_annotated.csv"]
 
     obj_data = []
     bbox_data = []
 
-    for file in obj_det_files:
+    for file in OBJECT_DETECTIONS:
         frame_list, bbox_list = read_object_detections(file)
         obj_data.append(frame_list)
         bbox_data.append(bbox_list)
@@ -180,7 +173,7 @@ def main():
     max_idxs = []
     tpfs = []
 
-    for file in gaze_files:
+    for file in GAZE_POSITIONS:
         gz, m_idx, tpf = read_gaze_file(file)
         gaze_data.append(gz)
         max_idxs.append(m_idx)
@@ -191,17 +184,30 @@ def main():
         out_dicts.append(get_frame_gaze_dict(gz, obj, bbx, midx))
 
     final_dicts = []
-    for file, out, midx, tpf in zip(gt_files, out_dicts, max_idxs, tpfs):
+    for file, out, midx, tpf in zip(GROUND_TRUTH, out_dicts, max_idxs, tpfs):
         final_dicts.append(read_looks_gt_file(file, out, midx, tpf))
 
     out_dir = os.path.join("data", "out")
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    chunk_dicts = create_chunks(final_dicts, FILE_CHUNK)
-
+    chunk_dicts = np.array(create_chunks(final_dicts, FILE_CHUNK))
     with open(os.path.join(out_dir, "data.pkl"), "wb") as f:
         pickle.dump(chunk_dicts, f)
+
+    train = []
+    test = []
+
+    kf = KFold(n_splits=NUMBER_OF_CV_FOLDS)
+    for train_split, test_split in kf.split(chunk_dicts):
+        train.append(chunk_dicts[train_split])
+        test.append(chunk_dicts[test_split])
+
+    with open(os.path.join(out_dir, "train.pkl"), "wb") as f:
+        pickle.dump(train, f)
+
+    with open(os.path.join(out_dir, "test.pkl"), "wb") as f:
+        pickle.dump(test, f)
 
 
 if __name__ == "__main__":

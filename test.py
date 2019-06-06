@@ -2,21 +2,21 @@ import os
 import pickle
 import pycrfsuite
 
-from crfsuite_data import get_crf_features
+from crfsuite_data import prepare_data
 from reporting import looks_classification_report
 
 with open(os.path.join("data/out", "test.pkl"), "rb") as f:
-    test_dicts = pickle.load(f)
+    test = pickle.load(f)
 
-tagger = pycrfsuite.Tagger()
-tagger.open('exp1')
+for i, data in enumerate(test):
+    tagger = pycrfsuite.Tagger()
+    tagger.open('exp_{}'.format(i))
 
-y_pred = []
-y_true = []
+    y_pred = []
+    y_true = []
+    for features, ylabel in prepare_data(data):
+        y_pred.append(tagger.tag(features))
+        y_true.append(ylabel)
 
-for features, ylabel in test_dicts:
-    y_pred.append(tagger.tag(features))
-    y_true.append(ylabel)
-
-print(looks_classification_report(y_true, y_pred))
+    print(looks_classification_report(y_true, y_pred))
 
