@@ -1,4 +1,13 @@
+import os
+
 # constants to be used for the project
+ROOT = "data/"
+OBJECT_DET_DIR = os.path.join(ROOT, "object_detections")
+GAZE_POS_DIR = os.path.join(ROOT, "gaze")
+GT_DIR = os.path.join(ROOT, "annotations")
+
+
+
 OBJECT_DETECTIONS = ["Andy.csv", "Daniel.csv", "2018_07_17_001.csv",
                      "2018_07_24_003.csv", "2018_07_17_004.csv"]  # "2018_07_25_000.csv"]
 GAZE_POSITIONS = ["Andy_gaze_positions.csv", "Daniel_gaze_positions.csv",

@@ -2,11 +2,11 @@ import os
 import pickle
 import pycrfsuite
 
-from crfsuite_data import get_crf_features
-from reporting import looks_classification_report
+from crfsuite_data import prepare_data
+from reporting import StatsManager, pretty_print_report
 
 with open(os.path.join("data/out", "test.pkl"), "rb") as f:
-    test_dicts = pickle.load(f)
+    test = pickle.load(f)
 
 def ftag(features):
     pred = []
@@ -27,12 +27,16 @@ def ftag(features):
         pred.append(p)
     return pred
     
-    
-y_pred = []
-y_true = []
+support_threshold = 0
+stats = StatsManager(support_threshold)
 
-for features, ylabel in test_dicts:
-    y_pred.append(ftag(features))
-    y_true.append(ylabel)
+for i, data in enumerate(test):
+    y_pred = []
+    y_true = []
+    for features, ylabel in prepare_data(data):
+        y_pred.append(ftag(features))
+        y_true.append(ylabel)
 
-print(looks_classification_report(y_true, y_pred))
+    stats.append_report(y_true, y_pred)
+report, summary = stats.summarize()
+pretty_print_report(report)

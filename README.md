@@ -11,4 +11,4 @@ the data into multiple sets of train and test based on 5-fold cross validation
 
 - hitscan_testing.py: to compare with the baseline
 
-- reporting.py: helper functions for statistics 
+- reporting.py: helper functions for statistics

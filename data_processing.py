@@ -8,12 +8,8 @@ import pickle
 from collections import defaultdict
 from sklearn.model_selection import KFold
 
-from constants import FILE_CHUNK, OBJECT_DETECTIONS, GAZE_POSITIONS, GROUND_TRUTH, NUMBER_OF_CV_FOLDS, LABELS
-
-root_dir = "data/"
-object_det = os.path.join(root_dir, "object_detections")
-gaze = os.path.join(root_dir, "gaze")
-gt = os.path.join(root_dir, "annotations")
+from constants import FILE_CHUNK, OBJECT_DETECTIONS, GAZE_POSITIONS, GROUND_TRUTH, NUMBER_OF_CV_FOLDS, LABELS, \
+    OBJECT_DET_DIR, GAZE_POS_DIR, GT_DIR
 
 
 def bbox_normalized_coords(bbox):
@@ -25,7 +21,7 @@ def bbox_normalized_coords(bbox):
 
 
 def read_object_detections(filename):
-    with open(os.path.join(object_det, filename)) as f:
+    with open(os.path.join(OBJECT_DET_DIR, filename)) as f:
         object_data = f.readlines()
 
     frame_list = []
@@ -62,7 +58,7 @@ def read_object_detections(filename):
 
 
 def read_gaze_file(filename):
-    gaze_data = pd.read_csv(os.path.join(gaze, filename))
+    gaze_data = pd.read_csv(os.path.join(GAZE_POS_DIR, filename))
     gaze_data = gaze_data[["timestamp", "index", "confidence", "norm_pos_x", "norm_pos_y"]]
     max_idx = int(gaze_data.iloc[-1]["index"] + 1)
     tpf = (gaze_data.iloc[-1]["timestamp"] - gaze_data.iloc[0]["timestamp"]) / max_idx
@@ -133,7 +129,7 @@ def get_frame_gaze_dict(gaze_list, frame_list, bbox_list, max_idx):
 
 
 def read_looks_gt_file(filename, out, max_idx, tpf):
-    looks = pd.read_csv(os.path.join(gt, filename))[["object", "start_sec", "end_sec"]]
+    looks = pd.read_csv(os.path.join(GT_DIR, filename))[["object", "start_sec", "end_sec"]]
     looks = looks.sort_values("start_sec")
     out["look"] = np.array([0] * max_idx)
     for row in looks.values:

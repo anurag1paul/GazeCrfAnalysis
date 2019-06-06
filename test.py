@@ -3,10 +3,13 @@ import pickle
 import pycrfsuite
 
 from crfsuite_data import prepare_data
-from reporting import looks_classification_report
+from reporting import StatsManager, pretty_print_report
 
 with open(os.path.join("data/out", "test.pkl"), "rb") as f:
     test = pickle.load(f)
+
+support_threshold = 100
+stats = StatsManager(support_threshold)
 
 for i, data in enumerate(test):
     tagger = pycrfsuite.Tagger()
@@ -18,5 +21,7 @@ for i, data in enumerate(test):
         y_pred.append(tagger.tag(features))
         y_true.append(ylabel)
 
-    print(looks_classification_report(y_true, y_pred))
+    stats.append_report(y_true, y_pred)
 
+report, summary = stats.summarize()
+pretty_print_report(report)

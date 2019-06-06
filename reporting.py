@@ -12,10 +12,11 @@ from constants import LABELS
 
 class StatsManager:
 
-    def __init__(self):
+    def __init__(self, supp_thres=0):
         self.reports = []
         self.y_pred = []
         self.y_true = []
+        self.support_threshold = supp_thres
 
     def transform(self, data):
         t_data = []
@@ -55,7 +56,8 @@ class StatsManager:
         for report in self.reports:
             for key in report.keys():
                 for metric in report[key].keys():
-                    summary[key][metric].append(report[key][metric])
+                    if report[key]["support"] > self.support_threshold:
+                        summary[key][metric].append(report[key][metric])
 
         report = defaultdict(dict)
 
