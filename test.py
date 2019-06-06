@@ -3,7 +3,7 @@ import pickle
 import pycrfsuite
 
 from crfsuite_data import prepare_data
-from reporting import StatsManager, pretty_print_report
+from reporting import StatsManager, pretty_print_report, pretty_rl_table
 
 with open(os.path.join("data/out", "test.pkl"), "rb") as f:
     test = pickle.load(f)
@@ -23,5 +23,10 @@ for i, data in enumerate(test):
 
     stats.append_report(y_true, y_pred)
 
+print("Multi-class Classification Report Mean(Std)")
 report, summary = stats.summarize()
 pretty_print_report(report)
+
+print("Run-length Report")
+rl_report = stats.runlength_report()
+pretty_rl_table(rl_report)

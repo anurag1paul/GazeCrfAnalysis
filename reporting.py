@@ -68,6 +68,27 @@ class StatsManager:
             report[key] = metrics
         return report, summary
 
+    def runlength_report(self):
+        report = defaultdict(list)
+        objects = ["card", "face", "dice", "key", "map", "ball"]
+
+        for pred_list, truth_list in zip(self.y_pred, self.y_true):
+            counter = defaultdict(lambda :[0]*2)
+            for pred, truth in zip(pred_list, truth_list):
+                pred = np.array(pred)
+                truth = np.array(truth)
+                for obj in objects:
+                    p = (pred == obj)
+                    t = (truth == obj)
+                    tp, fp = runlength(p, t, 4, 3)
+                    counter[obj][0] += tp
+                    counter[obj][1] += fp
+            for obj in LABELS.keys():
+                if sum(counter[obj]) > 0:
+                    report[obj].append(counter[obj][0] / sum(counter[obj]))
+
+        return report
+
 
 def pretty_print_report(report):
     table = PrettyTable(["", "Precision", "Recall", "F1-Score", "Support"])
@@ -82,4 +103,28 @@ def pretty_print_report(report):
                            "{:03.2f} ({:03.2f})".format(f1[0], f1[1]),
                            "{:03.2f} ({:03.2f})".format(sup[0], sup[1])])
 
+    print(table)
+
+
+def runlength(pred, gt, window, num_ones):
+    tp = 0
+    fp = 0
+    if np.sum(pred) > 3:
+        for i in range(len(pred)-window):
+            if np.sum(pred[i:i+window]) >= num_ones:
+                if np.sum(gt[i:i+window]) >= num_ones:
+                    tp += 1
+                else:
+                    fp += 1
+                break
+
+    return tp, fp
+
+
+def pretty_rl_table(report):
+    table = PrettyTable(["", "Precision"])
+    for obj in sorted(report.keys()):
+        m = np.mean(report[obj])
+        s = np.std(report[obj])
+        table.add_row([obj, "{:03.2f} ({:03.2f})".format(m, s)])
     print(table)
